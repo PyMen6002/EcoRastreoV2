@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EcoRastreo</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <meta name="description" content="Consulta en un mapa las observaciones de especies, su clima y fotos con EcoRastreo." />
+  <meta name="author" content="Kanaky Terraria" />
+
+  <style>
+    :root {
+      --primary: #2E8B57;
+      --bg: #f5f5f5;
+      --accent: #e0f2e9;
+      --text: #333;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+
+    /* Contenedor del logo y header para poder flexbox y reposicionar */
+    .header-container {
+    display: flex;
+    flex-direction: column; /* ← cambio clave */
+    align-items: center;
+    background-color: white;
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    gap: 1rem;
+    text-align: center;
+    }
+    /* Especies imagen + info */
+  .chart-container {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  #speciesInfo {
+    display: none;
+    align-items: center;
+    gap: 20px;
+    margin: 30px 0 20px;
+    padding: 15px 20px;
+    border-radius: 12px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #speciesImage {
+    width: 25%;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    max-height: 300px;
+  }
+
+  #speciesName {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #333;
+  }
+
+    /* Logo */
+    .header-container a#logoLink {
+      display: block;
+      height: 50px;
+      flex-shrink: 0;
+    }
+    .header-container a#logoLink img {
+      height: 50px;
+      display: block;
+    }
+
+    /* Texto principal */
+    .header-text {
+      color: #2E8B57;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      margin-top: 0.5rem; /* nuevo margen superior */
+    }
+    .header-text h1 {
+      margin: 0;
+      font-size: 2rem;
+      line-height: 1.1;
+    }
+    .header-text p {
+      margin: 4px 0 0 0;
+      color: #555;
+      font-weight: 500;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      padding: 10px;
+      font-size: 16px;
+      margin-right: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 250px;
+    }
+
+    button {
+      padding: 10px 15px;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    button:hover {
+      background-color: #246b46;
+    }
+
+    #map {
+      height: 500px;
+      margin-top: 20px;
+      border: 2px solid var(--primary);
+      border-radius: 8px;
+    }
+
+    .chart-container {
+      height: 400px;
+      margin-top: 40px;
+      background-color: white;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      input[type="text"],
+      input[type="number"],
+      button {
+        width: 100%;
+        margin-bottom: 10px;
+        margin-right: 0;
+      }
+    }
+  </style>
+  <link rel="icon" type="image/svg+xml" href="data:image/webp;base64,UklGRpQDAABXRUJQVlA4WAoAAAAQAAAAGAAAGAAAQUxQSJABAAARkC1JtmlbPeaxbZ9r27Zt+95H27Zt27Zt27attfphznX1BRExAfgPgw2hhf8sdEhs2VzBymtcSBZfTQwJaYLHTh44fN6FAwPismWur5ndyizu0KxurTKhKVq3z+hVL1Er3cMHqs2AHEEuIkqAgLZ9ci8RAAErJquBfRaWgrMEZ38XKgCiltfu5RPt6eDiKjLpXU0N8St6ukEXqMB9T8IzPts7w9B6bVroQRmqH/pIvr9//tBOASR8SVoAiBv1waZ53ZcDAFy6zVKAJD+h8+eN3AJAso8EZPQnOtubvnESABXQLMJFnedvHr1PNhFAFR01PFfX97bT1QfktyhILKTMyss2ne2fJCdCdSoNl+gBX+j46YFNcq9f9JqDQcg/r+UVk2U9/EnaG0tO/7xzvgCSps4d7dld6r9e2z+WPCwGAKpgzpskP1oGft+/4MMG0eDqnzjtJ7+9+Pj5/eMTh7Y94stk/GbOLdaXFw+evP5J8ktJ/LZL1bM0vyoHAOIEuFRe85HWi2nRov1pUHysj8AIVlA4IN4BAACQCQCdASoZABkAPpEopFIloaWllACwEglsAJ0yhHUA+GwkAG2ruwDeMz3QTZvxL/N3sD/yX+ef8jrwejH+wAWCU0niDqv8MRchEZPxxLTZyeKntcNwAP654Z+Rspxii9LBEtTh4BjTfz/B2binG67DlN3whDTtFMH73b75l+cR35thUHmfSSknf+Vxr4SiqdS04WK6cz4xcepV7kpEFgSBfw+wWeH2tQyomjB6b9DiQ9/2o6Jh6vH7f0RCI3zbHZY02FirfsVSQ08dk3tflxRiJymXOODG4g13ZLmP6U2TX5iAAuC6v6BvXOHD5HUrxuwBEyfK/an6AouD2VwA5/cMUQ9ZbX6TeJmHdU1+n+lBxlWjqKgB3K3n84TWI9JDZGqVYKhphCzn94Qs6rzumItne15/79/wFNtxnx+me07wIt5TgWXT8Y1ECIH7niv943VQZ2Avf1uJdfXBO/J5O6XSi3Oqn9n27m4do3+XgPy58OVG/yUMsqx+0cWRiv2kMy57zUp8b5pdsBd15T30CqTptyPEbXyhrVUcGoWxX/V2FJFRu+obuOTjkaeqTjzHchvX3i3Nf+hD7oMLYwkea74AbWltF+82jFFWYuNIVkQsyy2j02zFKP2TFJvyYAAA">
+</head>
+<body>
+
+  <header class="header-container">
+    <a href="https://kanakyterraria.com/" target="_blank" id="logoLink" aria-label="Logo Kanaky Terraria">
+      <img src="https://kanakyterraria.com/wp-content/uploads/2020/04/logo-kanaky-hor.svg" alt="Logo Kanaky" />
+    </a>
+    <div class="header-text">
+      <h1>🌿 EcoRastreo</h1>
+      <p>Consulta distribución, clima y fotos de especies para imitar sus hábitats</p>
+    </div>
+  </header>
+
+  <div class="container">
+    <input type="text" id="speciesInput" placeholder="Nombre de la especie (científico)" />
+    <input type="number" id="maxResultsInput" min="1" max="10000" value="100" title="Número máximo de avistamientos" />
+    <button onclick="searchObservations()">🔍 Buscar observaciones</button>
+    <div id="loadingSpinner" style="display: none; margin-top: 20px; text-align: center;">
+        <div class="spinner"></div>
+        <p>Cargando observaciones...</p>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="chart-container">
+      <div id="speciesInfo">
+        <img id="speciesImage" src="" alt="Imagen de la especie" />
+        <span style="display: none;" id="speciesName"></span>
+        <div id="gbifInfo" style="margin-top: 12px; font-size: 0.9rem; color: #555; max-width: 100%;"></div>
+      </div>
+      <canvas id="sightingsChart"></canvas>
+    </div>
+
+    <div id="charts">
+      <div id="temperatureChart" class="chart-container"></div>
+      <div id="humidityChart" class="chart-container"></div>
+      <div id="precipitationChart" class="chart-container"></div>
+      <div id="daylightChart" class="chart-container"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script>
+  let map = L.map('map').setView([40.4168, -3.7038], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  let markers = L.layerGroup().addTo(map);
+
+  async function fetchAllObservations(query, maxResults) {
+    let allResults = [];
+    let page = 1;
+    const perPage = 200;
+    let hasMore = true;
+
+    while (hasMore && allResults.length < maxResults) {
+      const url = `https://api.inaturalist.org/v1/observations?q=${encodeURIComponent(query)}&per_page=${perPage}&page=${page}&order_by=observed_on&geo=true&photos=true`;
+      const response = await fetch(url);
+      const data = await response.json();
+      const results = data.results || [];
+      allResults = allResults.concat(results);
+      if (results.length < perPage || allResults.length >= maxResults) hasMore = false;
+      page++;
+    }
+
+    return allResults.slice(0, maxResults);
+  }
+
+  async function searchObservations() {
+    const species = document.getElementById('speciesInput').value;
+    const maxResults = parseInt(document.getElementById('maxResultsInput').value);
+    const spinner = document.getElementById('loadingSpinner');
+    const gbifInfoDiv = document.getElementById('gbifInfo');
+    if (!species) {
+      alert('Por favor, ingresa el nombre de una especie.');
+      return;
+    }
+
+    spinner.style.display = 'block';
+    markers.clearLayers();
+    document.getElementById('speciesInfo').style.display = 'none';
+
+    try {
+      const observations = await fetchAllObservations(species, maxResults);
+
+      if (observations.length === 0) {
+        alert("⚠️ No se encontraron observaciones.");
+        spinner.style.display = 'none';
+        return;
+      }
+
+      observations.forEach(obs => {
+        if (obs.geojson && obs.geojson.coordinates) {
+          const [lon, lat] = obs.geojson.coordinates;
+          const marker = L.marker([lat, lon]).addTo(markers);
+          const photo = obs.photos[0]?.url.replace('square', 'medium') || '';
+          marker.bindPopup(`<strong>Fecha:</strong> ${obs.observed_on}<br>${photo ? `<img src="${photo}" width="100"/>` : ''}`);
+
+          marker.on('click', () => {
+            // Mostrar imagen del avistamiento
+            if (photo) {
+              document.getElementById('speciesImage').src = photo;
+              document.getElementById('speciesImage').style.display = 'block';
+            } else {
+              document.getElementById('speciesImage').style.display = 'none';
+            }
+
+            document.getElementById('speciesName').textContent = obs.species?.name || obs.taxon?.name || '';
+            document.getElementById('speciesInfo').style.display = 'flex';
+            fetchGbifData(speciesName.textContent);
+            // Obtener clima y mostrar gráficas
+            fetchClimateData(lat, lon);
+          });
+        }
+      });
+
+      const avgLat = observations.reduce((sum, o) => sum + o.geojson.coordinates[1], 0) / observations.length;
+      const avgLon = observations.reduce((sum, o) => sum + o.geojson.coordinates[0], 0) / observations.length;
+      map.setView([avgLat, avgLon], 5);
+
+    } catch (error) {
+      alert("Ocurrió un error al obtener las observaciones.");
+      console.error(error);
+    } finally {
+      spinner.style.display = 'none';
+    }
+  }
+
+  function fetchClimateData(lat, lon) {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 365);
+    const formatDate = date => date.toISOString().split('T')[0];
+
+    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${formatDate(startDate)}&end_date=${formatDate(endDate)}&daily=temperature_2m_max,temperature_2m_min,relative_humidity_2m_max,relative_humidity_2m_min,precipitation_sum,daylight_duration&timezone=auto`;
+
+    fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.daily) {
+        const dates = data.daily.time.slice(0, -1);
+        const tempMax = data.daily.temperature_2m_max.slice(0, -1);
+        const tempMin = data.daily.temperature_2m_min.slice(0, -1);
+        const tempAvg = tempMax.map((max, i) => (max + tempMin[i]) / 2);
+
+        const humidityAvg = data.daily.relative_humidity_2m_max.slice(0, -1).map((max, i) => {
+          return (max + data.daily.relative_humidity_2m_min[i]) / 2;
+        });
+
+        const movingAverage = (data, windowSize) => {
+          return data.map((val, idx, arr) => {
+            const start = Math.max(0, idx - Math.floor(windowSize / 2));
+            const end = Math.min(arr.length, idx + Math.ceil(windowSize / 2));
+            const window = arr.slice(start, end);
+            const avg = window.reduce((sum, v) => sum + v, 0) / window.length;
+            return avg;
+          });
+        };
+
+        const smoothAvg = movingAverage(tempAvg, 7);
+        const smoothMin = movingAverage(tempMin, 7);
+        const smoothMax = movingAverage(tempMax, 7);
+
+        Plotly.newPlot('temperatureChart', [
+          {
+            x: dates,
+            y: tempAvg,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Temperatura',
+            line: { color: 'rgba(200,0,0,0.3)' }
+          },
+          {
+            x: dates,
+            y: smoothAvg,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Media',
+            line: { color: 'red', width: 2, shape: 'spline' }
+          },
+          {
+            x: dates,
+            y: smoothMin,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Mínima',
+            line: { color: 'blue', width: 2, dash: 'dot', shape: 'spline' }
+          },
+          {
+            x: dates,
+            y: smoothMax,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Máxima',
+            line: { color: 'orange', width: 2, dash: 'dash', shape: 'spline' }
+          }
+        ], {
+          title: 'Temperatura Diaria (°C)',
+          margin: { t: 40 },
+          legend: { orientation: 'h', x: 0, y: 1.2 }
+        });
+
+      const humidityMin = data.daily.relative_humidity_2m_min.slice(0, -1);
+      const humidityMax = data.daily.relative_humidity_2m_max.slice(0, -1);
+      const smoothHumidityAvg = movingAverage(humidityAvg, 7);
+      const smoothHumidityMin = movingAverage(humidityMin, 7);
+      const smoothHumidityMax = movingAverage(humidityMax, 7);
+
+      Plotly.newPlot('humidityChart', [
+        {
+          x: dates,
+          y: humidityAvg,
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Humedad',
+          line: { color: 'rgba(200,0,0,0.3)' }
+        },
+        {
+          x: dates,
+          y: smoothHumidityAvg,
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Media',
+          line: { color: 'red', width: 2, shape: 'spline' }
+        },
+        {
+          x: dates,
+          y: smoothHumidityMin,
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Mínima',
+          line: { color: 'blue', width: 2, dash: 'dot', shape: 'spline' }
+        },
+        {
+          x: dates,
+          y: smoothHumidityMax,
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Máxima',
+          line: { color: 'orange', width: 2, dash: 'dash', shape: 'spline' }
+        
+        }], {
+          title: 'Humedad Diaria (%)',
+          margin: { t: 40 },
+          legend: { orientation: 'h', x: 0, y: 1.2 }
+        });
+
+        // Procesamiento de precipitaciones por mes
+        const precipitation = data.daily.precipitation_sum.slice(0, -1);
+        const monthLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+        const monthlyPrecip = new Array(12).fill(0);
+        const monthlyCounts = new Array(12).fill(0);
+
+        dates.forEach((dateStr, i) => {
+          const month = new Date(dateStr).getMonth();
+          monthlyPrecip[month] += precipitation[i] || 0;
+          monthlyCounts[month]++;
+        });
+
+        Plotly.newPlot('precipitationChart', [{
+          x: monthLabels,
+          y: monthlyPrecip,
+          type: 'bar',
+          name: 'Precipitación mensual (mm)',
+          marker: { color: 'skyblue' }
+        }], {
+          title: 'Precipitación Total Mensual (mm)',
+          margin: { t: 40 }
+        });
+
+        // Ajustar el tamaño de los gráficos
+        const charts = document.querySelectorAll('.chart-container');
+        charts.forEach(chart => {
+          chart.style.height = '400px';
+          chart.style.width = '100%';
+        });
+
+        // Procesamienmto de duración del día
+        const daylightDuration = data.daily.daylight_duration.slice(0, -1);
+        const daylightAvg = daylightDuration.map(d => d / 3600); // Convertir a horas
+        
+        Plotly.newPlot('daylightChart', [{
+          x: dates,
+          y: daylightAvg,
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Duración del día',
+          line: { color: 'green' }
+        }], {
+          title: 'Duración del Día (horas)',
+          margin: { t: 40 },
+          legend: { orientation: 'h', x: 0, y: 1.2 }
+        });
+
+      } else {
+        alert('No se encontraron datos climáticos.');
+      }
+    })
+    .catch(error => {
+      console.error('Error al obtener clima:', error);
+    });
+  }
+
+
+    // Función para obtener info desde GBIF
+    async function fetchGbifData(speciesName) {
+      const gbifInfoDiv = document.getElementById('gbifInfo');
+      gbifInfoDiv.textContent = 'Cargando información adicional...';
+
+      try {
+        const response = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(speciesName)}`);
+        const matchData = await response.json();
+
+        if (!matchData.usageKey) {
+          gbifInfoDiv.textContent = 'No se encontró información en GBIF.';
+          return;
+        }
+
+        const speciesResponse = await fetch(`https://api.gbif.org/v1/species/${matchData.usageKey}`);
+        const speciesData = await speciesResponse.json();
+
+        const vernacularName = speciesData.species || 'Nombre no disponible';
+        const kingdom = speciesData.kingdom || '';
+        const phylum = speciesData.phylum || '';
+        const order = speciesData.order || '';
+        const family = speciesData.family || '';
+        const genus = speciesData.genus || '';
+
+        gbifInfoDiv.innerHTML = `
+          <strong>Especie:</strong> ${vernacularName}<br/>
+          <strong>Clasificación:</strong> ${kingdom} &gt; ${phylum} &gt; ${order} &gt; ${family} &gt; ${genus} &gt; <em>${speciesName}</em>
+        `;
+      } catch (error) {
+        console.error('Error al obtener datos de GBIF:', error);
+        gbifInfoDiv.textContent = 'Error al cargar información de GBIF.';
+      }
+    }
+
+  </script>
+</body>
+</html>
