@@ -199,7 +199,6 @@
       <div id="speciesInfo">
         <img id="speciesImage" src="" alt="Imagen de la especie" />
         <span style="display: none;" id="speciesName"></span>
-        <div id="gbifInfo" style="margin-top: 12px; font-size: 0.9rem; color: #555; max-width: 100%;"></div>
       </div>
       <canvas id="sightingsChart"></canvas>
     </div>
@@ -475,40 +474,6 @@
     });
   }
 
-
-    // Función para obtener info desde GBIF
-    async function fetchGbifData(speciesName) {
-      const gbifInfoDiv = document.getElementById('gbifInfo');
-      gbifInfoDiv.textContent = 'Cargando información adicional...';
-
-      try {
-        const response = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(speciesName)}`);
-        const matchData = await response.json();
-
-        if (!matchData.usageKey) {
-          gbifInfoDiv.textContent = 'No se encontró información en GBIF.';
-          return;
-        }
-
-        const speciesResponse = await fetch(`https://api.gbif.org/v1/species/${matchData.usageKey}`);
-        const speciesData = await speciesResponse.json();
-
-        const vernacularName = speciesData.species || 'Nombre no disponible';
-        const kingdom = speciesData.kingdom || '';
-        const phylum = speciesData.phylum || '';
-        const order = speciesData.order || '';
-        const family = speciesData.family || '';
-        const genus = speciesData.genus || '';
-
-        gbifInfoDiv.innerHTML = `
-          <strong>Especie:</strong> ${vernacularName}<br/>
-          <strong>Clasificación:</strong> ${kingdom} &gt; ${phylum} &gt; ${family} &gt; ${genus} &gt; <em>${speciesName}</em>
-        `;
-      } catch (error) {
-        console.error('Error al obtener datos de GBIF:', error);
-        gbifInfoDiv.textContent = 'Error al cargar información de GBIF.';
-      }
-    }
 
   </script>
 </body>
